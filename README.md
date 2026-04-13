@@ -75,10 +75,19 @@ npm run dev
 | Variable | Default | Required | Description |
 |----------|---------|----------|-------------|
 | `DATABASE_URL` | `file:./dev.db` | ✅ | SQLite path or Postgres connection string |
-| `GITHUB_MODELS_TOKEN` | — | ❌ | GitHub PAT with `models:read` scope — enables AI-enriched submission feedback |
-| `GITHUB_MODELS_ENDPOINT` | `https://models.inference.ai.azure.com` | ❌ | Override the GitHub Models inference endpoint |
-| `GITHUB_MODELS_MODEL` | `gpt-4o-mini` | ❌ | Model name to use (e.g. `gpt-4o`, `meta-llama-3-8b-instruct`) |
 | `NEXT_PUBLIC_APP_URL` | `http://localhost:3000` | ❌ | Used for absolute URLs in emails/links |
+| `AI_PROVIDER` | _(auto)_ | ❌ | Force a specific provider: `github_models`, `openrouter`, or `cerebras`. Auto-detected from available keys when omitted. |
+| `GITHUB_MODELS_TOKEN` | — | ❌ | GitHub PAT with `models:read` scope |
+| `GITHUB_MODELS_ENDPOINT` | `https://models.inference.ai.azure.com` | ❌ | Override the GitHub Models inference endpoint |
+| `GITHUB_MODELS_MODEL` | `gpt-4o-mini` | ❌ | GitHub Models model name |
+| `OPENROUTER_API_KEY` | — | ❌ | OpenRouter API key (free models available) |
+| `OPENROUTER_MODEL` | `meta-llama/llama-3.1-8b-instruct:free` | ❌ | OpenRouter model name |
+| `OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` | ❌ | Override OpenRouter base URL |
+| `OPENROUTER_SITE_URL` | — | ❌ | Site URL sent in `HTTP-Referer` header |
+| `OPENROUTER_APP_NAME` | `PrepBook` | ❌ | App name sent in `X-Title` header |
+| `CEREBRAS_API_KEY` | — | ❌ | Cerebras Cloud API key |
+| `CEREBRAS_MODEL` | `llama3.1-8b` | ❌ | Cerebras model name |
+| `CEREBRAS_BASE_URL` | `https://api.cerebras.ai/v1` | ❌ | Override Cerebras base URL |
 
 Copy `.env.local.example` to `.env.local` and fill in your values.
 
@@ -175,35 +184,67 @@ const rubric = await prisma.rubric.create({
 
 ---
 
-## AI Integration (GitHub Models)
+## AI Integration
 
-PrepBook uses [GitHub Models](https://github.com/marketplace/models) as its AI backend — no OpenAI account needed, just a GitHub token.
+PrepBook supports three AI providers. All are optional — every feature works in deterministic fallback mode when no keys are configured.
 
-### Enabling AI
+### Provider auto-detection
+
+The app picks the first provider whose key is present: **GitHub Models → OpenRouter → Cerebras**. Override with `AI_PROVIDER` in `.env.local`.
+
+### GitHub Models
+
+No OpenAI account needed — just a GitHub token.
 
 1. Go to **GitHub → Settings → Personal access tokens → Fine-grained tokens**.
 2. Create a token with the **`models:read`** scope.
-3. Add it to your `.env.local`:
+3. Add to `.env.local`:
    ```
    GITHUB_MODELS_TOKEN="github_pat_..."
    ```
-4. Restart the dev server.
+
+### OpenRouter (free models available)
+
+OpenRouter gives access to many models including free-tier ones.
+
+1. Sign up at [openrouter.ai](https://openrouter.ai) and create an API key.
+2. Add to `.env.local`:
+   ```
+   AI_PROVIDER="openrouter"
+   OPENROUTER_API_KEY="sk-or-..."
+   # Optional: pick a specific free model
+   # OPENROUTER_MODEL="meta-llama/llama-3.1-8b-instruct:free"
+   ```
+
+### Cerebras Cloud
+
+Cerebras offers fast inference with generous free credits.
+
+1. Sign up at [cloud.cerebras.ai](https://cloud.cerebras.ai) and create an API key.
+2. Add to `.env.local`:
+   ```
+   AI_PROVIDER="cerebras"
+   CEREBRAS_API_KEY="your_key_here"
+   # Optional: choose model and endpoint
+   # CEREBRAS_MODEL="llama3.1-8b"
+   ```
 
 ### AI features
 
-| Feature | Route | Behavior without token |
-|---------|-------|------------------------|
+| Feature | Route | Behavior without AI |
+|---------|-------|---------------------|
 | DBQ/LEQ submission feedback | `POST /api/submissions/[id]/submit` | Falls back to word-count heuristics |
 
 ### Disable AI / fallback mode
 
-Simply omit or leave `GITHUB_MODELS_TOKEN` empty. Every feature continues to work using deterministic rule-based logic.
+Leave all AI keys blank. Every feature continues to work using deterministic rule-based logic.
 
 ### Troubleshooting
 
-- **`401 Unauthorized` from GitHub Models** — Token is expired or lacks `models:read` scope.
-- **`429 Rate limit`** — You've hit the free-tier quota; wait or switch to a different model via `GITHUB_MODELS_MODEL`.
-- **No AI feedback after submitting** — Check server logs for `GitHub Models API error` entries.
+- **`401 Unauthorized`** — Key is invalid or expired. Check the key for the active provider.
+- **`429 Rate limit`** — Free-tier quota hit; wait or switch providers/models.
+- **No AI feedback after submitting** — Check server logs for `API error` entries.
+- **Wrong provider being used** — Set `AI_PROVIDER` explicitly to override auto-detection.
 
 ---
 
@@ -264,7 +305,7 @@ prepbook/
 │   └── lib/
 │       ├── prisma.ts        # Prisma client singleton
 │       ├── planner.ts       # Planner generation logic
-│       ├── ai.ts            # GitHub Models AI service
+│       ├── ai.ts            # Multi-provider AI service (GitHub Models / OpenRouter / Cerebras)
 │       └── hooks.ts         # React hooks (useUserId, etc.)
 ├── .devcontainer/
 │   └── devcontainer.json    # Codespaces config
