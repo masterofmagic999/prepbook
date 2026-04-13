@@ -10,6 +10,10 @@
  *   GITHUB_MODELS_MODEL     – Model ID to use (default: "gpt-4o-mini").
  *   GITHUB_MODELS_BASE_URL  – Override the inference endpoint
  *                             (default: "https://models.inference.ai.azure.com").
+ *
+ * Fallback: when GITHUB_TOKEN is absent the app uses deterministic text and
+ * continues to work normally. No errors are raised. Check isLive on the
+ * returned provider to know which path is active.
  */
 
 // ---------------------------------------------------------------------------
@@ -124,7 +128,7 @@ class GitHubModelsProvider implements AIProvider {
       {
         role: 'system',
         content:
-          'You are a strict AP World History grader. Return ONLY valid JSON with keys "score" (integer) and "feedback" (string, ≤ 40 words). No extra text.',
+          'You are a strict AP World History grader. Return ONLY valid JSON with keys "score" (integer) and "feedback" (string, <= 40 words). No extra text.',
       },
       {
         role: 'user',
@@ -214,7 +218,7 @@ class FallbackProvider implements AIProvider {
 // Factory — picks the right provider based on env vars
 // ---------------------------------------------------------------------------
 
-let _provider: AIProvider | null = null
+let cachedProvider: AIProvider | null = null
 
 /**
  * Returns the active AI provider.
@@ -225,24 +229,24 @@ let _provider: AIProvider | null = null
  * Call this inside server-side code (API routes, server components) only.
  */
 export function getAIProvider(): AIProvider {
-  if (_provider) return _provider
+  if (cachedProvider) return cachedProvider
 
   const token = process.env.GITHUB_TOKEN ?? ''
   const model = process.env.GITHUB_MODELS_MODEL ?? DEFAULT_MODEL
   const baseUrl = (process.env.GITHUB_MODELS_BASE_URL ?? DEFAULT_BASE_URL).replace(/\/$/, '')
 
   if (token) {
-    _provider = new GitHubModelsProvider(token, model, baseUrl)
+    cachedProvider = new GitHubModelsProvider(token, model, baseUrl)
   } else {
-    _provider = new FallbackProvider()
+    cachedProvider = new FallbackProvider()
   }
 
-  return _provider
+  return cachedProvider
 }
 
 /**
  * Reset the cached provider instance. Useful in tests.
  */
 export function resetAIProvider(): void {
-  _provider = null
+  cachedProvider = null
 }
