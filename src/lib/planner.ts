@@ -25,8 +25,6 @@ export interface StudyTaskData {
   isRescheduled: boolean
 }
 
-const TASK_TYPES = ['MCQ', 'SAQ', 'DBQ', 'LEQ', 'REVIEW', 'MIXED'] as const
-
 function addDays(date: Date, days: number): Date {
   const d = new Date(date)
   d.setDate(d.getDate() + days)

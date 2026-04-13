@@ -163,7 +163,7 @@ export default function PracticeModePage() {
         <div className="flex-1 bg-gray-200 rounded-full h-2">
           <div
             className="bg-indigo-600 h-2 rounded-full transition-all"
-            style={{ width: `${((currentIdx) / questions.length) * 100}%` }}
+            style={{ width: `${((currentIdx + 1) / questions.length) * 100}%` }}
           />
         </div>
         <span className="text-sm text-gray-500 shrink-0">{currentIdx + 1} / {questions.length}</span>

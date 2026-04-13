@@ -61,8 +61,9 @@ export default function OnboardingPage() {
     }
   }
 
+  const MIN_DAYS_UNTIL_EXAM = 7
   const minDate = new Date()
-  minDate.setDate(minDate.getDate() + 7)
+  minDate.setDate(minDate.getDate() + MIN_DAYS_UNTIL_EXAM)
   const minDateStr = minDate.toISOString().split('T')[0]
 
   return (

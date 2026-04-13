@@ -39,7 +39,6 @@ export default function DashboardPage() {
   const [units, setUnits] = useState<Unit[]>([])
   const [hasPlan, setHasPlan] = useState(false)
   const [dataLoading, setDataLoading] = useState(true)
-  const [userName, setUserName] = useState('')
 
   useEffect(() => {
     if (loading) return
