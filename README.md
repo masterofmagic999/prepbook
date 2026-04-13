@@ -30,17 +30,65 @@ A full-stack MVP for AP World History exam preparation featuring unit-based MCQ/
 ## Quick Start (GitHub Codespaces)
 
 1. Click **Code → Open with Codespaces → New codespace** in the GitHub repo.
-2. The `postCreateCommand` in `.devcontainer/devcontainer.json` automatically runs:
+2. Wait for the container to finish the `postCreateCommand` setup (visible in the terminal panel). It automatically runs:
    ```bash
    npm install
+   cp -n .env.local.example .env.local
+   npx prisma generate
    npx prisma db push
    npx prisma db seed
    ```
-3. Run the dev server:
-   ```bash
-   npm run dev
-   ```
-4. Open the forwarded port `3000` in your browser.
+3. The dev server starts **automatically** via `postStartCommand`. The **Ports** tab (bottom panel) will show port `3000` with a globe icon once it's ready.
+4. Click the globe icon next to port `3000`, or open the **Simple Browser** preview that pops up automatically.
+
+> **If the dev server is not running** (e.g., you stopped it), restart it from the terminal:
+> ```bash
+> npm run dev
+> ```
+
+---
+
+### Troubleshooting HTTP 502 in Codespaces
+
+A **502 Bad Gateway** on the `*.app.github.dev` URL means the forwarding proxy couldn't reach the app. Work through these steps:
+
+#### 1. Make sure the dev server is running
+Open a terminal in the Codespace and check:
+```bash
+# Check if Next.js is listening
+curl -s http://localhost:3000/api/health
+# Expected: {"status":"ok","database":"ok",...}
+```
+If you get "Connection refused", start the server:
+```bash
+npm run dev
+```
+Wait for `✓ Ready` in the output, then refresh the browser tab.
+
+#### 2. Database not initialized
+If `curl http://localhost:3000/api/health` returns `{"database":"error",...}`, the database needs to be set up:
+```bash
+cp -n .env.local.example .env.local
+npx prisma generate
+npx prisma db push
+npx prisma db seed
+npm run dev
+```
+
+#### 3. Environment variable missing
+Confirm `.env.local` exists and contains `DATABASE_URL`:
+```bash
+cat .env.local
+# Should show: DATABASE_URL="file:./dev.db"
+```
+If the file is missing:
+```bash
+cp .env.local.example .env.local
+```
+Then restart the dev server.
+
+#### 4. Port visibility
+In the **Ports** tab, make sure port `3000` visibility is set to **Private** or **Public** (not just "localhost"). Right-click the port row and change visibility if needed.
 
 ---
 

@@ -3,7 +3,14 @@
   "image": "mcr.microsoft.com/devcontainers/javascript-node:20",
   "features": {},
   "forwardPorts": [3000],
-  "postCreateCommand": "npm install && npx prisma db push && npx prisma db seed",
+  "portsAttributes": {
+    "3000": {
+      "label": "PrepBook Dev Server",
+      "onAutoForward": "openPreview"
+    }
+  },
+  "postCreateCommand": "npm install && cp -n .env.local.example .env.local && npx prisma generate && npx prisma db push && npx prisma db seed",
+  "postStartCommand": "npm run dev",
   "customizations": {
     "vscode": {
       "extensions": [
