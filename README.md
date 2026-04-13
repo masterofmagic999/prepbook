@@ -23,7 +23,7 @@ A full-stack MVP for AP World History exam preparation featuring unit-based MCQ/
 - 📅 **Personalized Study Planner** — Auto-generated daily tasks based on exam date, hours/week, and unit mastery; auto-reschedules missed tasks; pre-exam intensity mode in final 3 weeks
 - 📊 **Review Center** — Per-unit mastery bars and incorrect-answer log with retry links
 - 🎯 **Mastery Tracking** — Per-unit scores updated automatically from attempt history
-- 🤖 **AI Hook** — Set `OPENAI_API_KEY` to enrich planner task descriptions; falls back gracefully to deterministic output
+- 🤖 **AI Planner & Feedback** — Set `GITHUB_TOKEN` to enable GitHub Models–powered planner notes and rubric feedback; falls back gracefully to deterministic output
 
 ---
 
@@ -75,10 +75,107 @@ npm run dev
 | Variable | Default | Required | Description |
 |----------|---------|----------|-------------|
 | `DATABASE_URL` | `file:./dev.db` | ✅ | SQLite path or Postgres connection string |
-| `OPENAI_API_KEY` | — | ❌ | Enables AI-enriched planner descriptions |
+| `GITHUB_TOKEN` | — | ❌ | GitHub PAT or Codespaces token — enables AI features |
+| `GITHUB_MODELS_MODEL` | `gpt-4o-mini` | ❌ | Model ID from the GitHub Models catalogue |
+| `GITHUB_MODELS_BASE_URL` | `https://models.inference.ai.azure.com` | ❌ | Override inference endpoint (advanced) |
 | `NEXT_PUBLIC_APP_URL` | `http://localhost:3000` | ❌ | Used for absolute URLs in emails/links |
 
 Copy `.env.local.example` to `.env.local` and fill in your values.
+
+---
+
+## GitHub Models Setup
+
+PrepBook uses [GitHub Models](https://github.com/marketplace/models) for AI-powered study planner notes and writing feedback. The integration is **optional** — the app works fully without it, using deterministic fallback text instead.
+
+### In GitHub Codespaces (zero-config)
+
+Codespaces automatically injects a `GITHUB_TOKEN` with the `models:read` scope. No extra setup is needed:
+
+1. Open the repo in a Codespace.
+2. Run the dev server (`npm run dev`).
+3. AI features are active immediately.
+
+To confirm, call the smoke-test endpoint:
+
+```bash
+curl http://localhost:3000/api/ai/test
+# → { "provider": "github_models", "model": "gpt-4o-mini", "result": "..." }
+```
+
+### Local Development
+
+1. **Create a Personal Access Token (PAT)**
+   - Go to <https://github.com/settings/tokens> → **Fine-grained tokens** → **Generate new token**.
+   - Under **Account permissions → GitHub Models**, set access to **Read**.
+   - Copy the token value.
+
+2. **Add the token to `.env.local`**
+
+   ```bash
+   cp .env.local.example .env.local
+   ```
+
+   Edit `.env.local`:
+
+   ```env
+   GITHUB_TOKEN="github_pat_..."
+   GITHUB_MODELS_MODEL="gpt-4o-mini"   # or any model from the catalogue
+   ```
+
+3. **Restart the dev server** so the new env vars are picked up:
+
+   ```bash
+   npm run dev
+   ```
+
+4. **Verify the integration**
+
+   ```bash
+   curl http://localhost:3000/api/ai/test
+   # → { "provider": "github_models", "model": "gpt-4o-mini", "result": "..." }
+   ```
+
+### Where secrets live
+
+| Environment | Where to set `GITHUB_TOKEN` |
+|-------------|----------------------------|
+| Codespaces | Auto-injected — nothing to do |
+| Local dev | `.env.local` (git-ignored) |
+| Production / CI | Repository → **Settings → Secrets → Actions** |
+
+> ⚠️ Never commit `.env.local` or any file containing real tokens. It is already listed in `.gitignore`.
+
+### Choosing a model
+
+Browse available models at <https://github.com/marketplace/models>. Set the model ID in `GITHUB_MODELS_MODEL`:
+
+```env
+GITHUB_MODELS_MODEL="gpt-4o"          # more capable, slower, higher quota cost
+GITHUB_MODELS_MODEL="gpt-4o-mini"     # default — fast and quota-friendly
+GITHUB_MODELS_MODEL="meta-llama-3-8b-instruct"  # open-source option
+```
+
+### Fallback behaviour
+
+When `GITHUB_TOKEN` is absent or the API is unreachable:
+
+- Planner tasks use deterministic description templates (same quality as before).
+- Submission scoring uses word-count heuristics.
+- **No errors are surfaced to users** — the app degrades silently.
+
+The fallback is implemented in `src/lib/ai.ts` (`FallbackProvider`). You can call `GET /api/ai/test` to check which provider is active:
+
+```json
+{ "provider": "fallback", "model": null, "result": "Practice multiple choice..." }
+```
+
+### AI features powered by GitHub Models
+
+| Feature | AI behaviour | Fallback |
+|---------|-------------|---------|
+| Planner task descriptions | GPT-generated, specific to unit & phase | Template strings |
+| DBQ/LEQ rubric scoring | Per-criterion AI feedback | Word-count heuristics |
 
 ---
 
@@ -183,7 +280,7 @@ The planner uses a **hybrid deterministic + AI approach**:
    - Prioritizes weak units (low mastery score).
    - Balances mode mix: ~30% MCQ, ~25% SAQ, ~25% DBQ, ~20% LEQ.
    - Activates **pre-exam intensity mode** in the final 3 weeks (more timed MCQ/mixed sets).
-   - If `OPENAI_API_KEY` is set, enriches task titles/descriptions via OpenAI; otherwise uses deterministic templates.
+   - If `GITHUB_TOKEN` is set, enriches task titles/descriptions via GitHub Models; otherwise uses deterministic templates.
 
 2. **`rescheduleMissedTasks(tasks)`** — Takes the task list, finds incomplete past-due tasks, and reassigns them to the earliest available future slot.
 
@@ -219,6 +316,7 @@ prepbook/
 │   │   ├── layout.tsx       # Root layout + nav
 │   │   └── page.tsx         # Root redirect
 │   └── lib/
+│       ├── ai.ts            # GitHub Models adapter + fallback provider
 │       ├── prisma.ts        # Prisma client singleton
 │       ├── planner.ts       # Planner generation logic
 │       └── hooks.ts         # React hooks (useUserId, etc.)

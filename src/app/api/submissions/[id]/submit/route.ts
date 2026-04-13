@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getAIProvider } from '@/lib/ai'
 
 export async function POST(
   request: NextRequest,
@@ -37,16 +38,16 @@ export async function POST(
     })
 
     if (rubric && submission.scores.length === 0) {
-      const wordCount = existing.content.trim().split(/\s+/).filter(Boolean).length
-      const hasThesis = wordCount > 50
-      const hasEvidence = wordCount > 150
-      const hasContext = wordCount > 100
+      const ai = getAIProvider()
 
       for (const criterion of rubric.criteria) {
-        let score = 0
-        if (criterion.name.includes('Thesis') && hasThesis) score = 1
-        else if (criterion.name.includes('Evidence') && hasEvidence) score = criterion.maxPoints >= 2 ? 1 : 0
-        else if (criterion.name.includes('Contextualization') && hasContext) score = 1
+        const { score, feedback } = await ai.generateWritingFeedback({
+          questionType: submission.question.type,
+          prompt: submission.question.prompt,
+          draft: existing.content,
+          criterionName: criterion.name,
+          maxPoints: criterion.maxPoints,
+        })
 
         await prisma.submissionScore.create({
           data: {
@@ -55,9 +56,7 @@ export async function POST(
             criterionName: criterion.name,
             score,
             maxScore: criterion.maxPoints,
-            feedback: score > 0
-              ? `Good work on ${criterion.name.toLowerCase()}.`
-              : `Consider strengthening your ${criterion.name.toLowerCase()}.`,
+            feedback,
           },
         })
       }
