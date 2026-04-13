@@ -291,6 +291,94 @@ The following are prioritized next features, roughly highest-to-lowest impact:
 
 ---
 
+## Collaborative Development & Merge Conflicts
+
+### Why conflicts happen here
+
+PrepBook is actively developed using **multiple Copilot coding agent sessions** alongside human contributors.  
+Each session opens its own branch and pull request. When two sessions (or a session and a human) touch the **same file at the same time**, Git cannot automatically reconcile the differences — this is a merge conflict.
+
+High-conflict-risk files in this repo:
+
+| File / Path | Why it's high-risk |
+|---|---|
+| `prisma/schema.prisma` | Every feature that touches the data model modifies this single file |
+| `prisma/seed.ts` | Questions, units, and rubric data all land here |
+| `README.md` | Documentation updates from any session end up here |
+| `src/app/layout.tsx` | Nav links change whenever a new page is added |
+| `src/lib/planner.ts` | Core planner logic touched by scheduling and AI work |
+| `.env.local.example` | New env vars appended from multiple directions |
+
+---
+
+### Best practices to avoid conflicts
+
+**1. One feature per branch / PR**  
+Keep each Copilot session or contributor focused on a single, clearly scoped feature (e.g., "add Unit 9 questions" or "fix planner date timezone bug"). Small PRs merge faster and conflict less.
+
+**2. Sync with `main` before starting work**  
+Always fetch and rebase (or merge) the latest `main` before opening a new session:
+```bash
+git fetch origin
+git rebase origin/main   # or: git merge origin/main
+```
+
+**3. Split ownership of high-risk files**  
+Coordinate so that only one session at a time modifies `schema.prisma`, `seed.ts`, or `layout.tsx`. Use GitHub Issues or PR descriptions to signal "I'm touching the schema."
+
+**4. Merge open PRs before starting related work**  
+If a PR that changes `schema.prisma` is already open, wait for it to merge (or explicitly build on top of that branch) before opening another PR that modifies the schema.
+
+**5. Keep Prisma migrations atomic**  
+Run `npx prisma migrate dev --name <descriptive-name>` once per schema change. Never hand-edit the generated migration SQL files; let Prisma regenerate them after a rebase.
+
+---
+
+### Resolving a conflict when it occurs
+
+1. **Identify the conflicting PR** — GitHub will mark it "This branch has conflicts that must be resolved."
+
+2. **Pull the target branch locally and rebase:**
+   ```bash
+   git fetch origin
+   git checkout your-feature-branch
+   git rebase origin/main
+   ```
+
+3. **Open each conflicted file** — Git marks conflicts like this:
+   ```
+   <<<<<<< HEAD
+   // your changes
+   // incoming changes from main
+   >>>>>>> origin/main
+   ```
+   Edit the file to keep the correct combined result; remove all conflict markers.
+
+4. **For `schema.prisma` conflicts** — keep all new model fields from both sides, then run:
+   ```bash
+   npx prisma generate
+   npx prisma db push   # or: npx prisma migrate dev
+   ```
+
+5. **For `seed.ts` conflicts** — merge both sets of question/unit arrays, then re-seed:
+   ```bash
+   npx prisma db seed
+   ```
+
+6. **Stage, continue, and push:**
+   ```bash
+   git add .
+   git rebase --continue
+   git push --force-with-lease origin your-feature-branch
+   ```
+
+7. **Re-run the app** to confirm nothing broke:
+   ```bash
+   npm run dev
+   ```
+
+---
+
 ## Future Expansion
 
 - **Additional AP subjects:** Add a `subject` field to `Unit` and `Question`; filter everywhere by subject.
