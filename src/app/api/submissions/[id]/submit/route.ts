@@ -32,7 +32,7 @@ export async function POST(
 
     // Basic auto-scoring: create placeholder scores based on rubric
     const rubric = await prisma.rubric.findFirst({
-      where: { questionType: existing.status === 'FINAL' ? 'LEQ' : submission.question.type },
+      where: { questionType: submission.question.type },
       include: { criteria: { orderBy: { orderIndex: 'asc' } } },
     })
 

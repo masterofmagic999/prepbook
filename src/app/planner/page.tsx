@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useUserId } from '@/lib/hooks'
 import { Calendar, CheckCircle, Clock, RefreshCw, Plus } from 'lucide-react'
@@ -58,13 +58,7 @@ export default function PlannerPage() {
   const [dataLoading, setDataLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
 
-  useEffect(() => {
-    if (loading) return
-    if (!userId) { router.replace('/onboarding'); return }
-    fetchData()
-  }, [userId, loading]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  async function fetchData() {
+  const fetchData = useCallback(async () => {
     if (!userId) return
     setDataLoading(true)
     try {
@@ -79,7 +73,13 @@ export default function PlannerPage() {
     } finally {
       setDataLoading(false)
     }
-  }
+  }, [userId])
+
+  useEffect(() => {
+    if (loading) return
+    if (!userId) { router.replace('/onboarding'); return }
+    fetchData()
+  }, [userId, loading, router, fetchData])
 
   async function handleGenerate() {
     if (!userId || !profile) return
