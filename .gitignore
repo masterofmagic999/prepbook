@@ -35,6 +35,10 @@ yarn-error.log*
 .env.local
 .env.*.local
 
+# misnamed env file — rename to .env.local (see .env.local.example)
+enviorment.env
+environment.env
+
 # vercel
 .vercel
 
