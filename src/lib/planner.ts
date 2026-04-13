@@ -27,12 +27,12 @@ export interface StudyTaskData {
 
 function addDays(date: Date, days: number): Date {
   const d = new Date(date)
-  d.setDate(d.getDate() + days)
+  d.setUTCDate(d.getUTCDate() + days)
   return d
 }
 
 function getWeekday(date: Date): number {
-  return date.getDay() // 0=Sun, 6=Sat
+  return date.getUTCDay() // 0=Sun, 6=Sat (UTC-based to match stored dates)
 }
 
 function isWeekend(date: Date): boolean {
@@ -42,11 +42,13 @@ function isWeekend(date: Date): boolean {
 
 export function generateStudyPlan(params: PlannerParams): StudyTaskData[] {
   const { planId, examDate, targetScore, hoursPerWeek, masteryScores, units } = params
+  // Use UTC noon so the calendar date is unambiguous in any client timezone.
+  // (UTC midnight rolls back to "yesterday" for users in UTC-offset zones.)
   const today = new Date()
-  today.setHours(0, 0, 0, 0)
+  today.setUTCHours(12, 0, 0, 0)
 
   const exam = new Date(examDate)
-  exam.setHours(0, 0, 0, 0)
+  exam.setUTCHours(12, 0, 0, 0)
 
   const totalDays = Math.max(
     Math.floor((exam.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)),
@@ -194,8 +196,9 @@ export function rescheduleMissedTasks(
     planId: string
   }>
 ): typeof tasks {
+  // Use UTC noon as "today" baseline — consistent with generateStudyPlan.
   const today = new Date()
-  today.setHours(0, 0, 0, 0)
+  today.setUTCHours(12, 0, 0, 0)
 
   const missedTasks = tasks.filter(
     (t) => !t.isCompleted && !t.isRescheduled && new Date(t.date) < today

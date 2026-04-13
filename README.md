@@ -75,7 +75,9 @@ npm run dev
 | Variable | Default | Required | Description |
 |----------|---------|----------|-------------|
 | `DATABASE_URL` | `file:./dev.db` | ✅ | SQLite path or Postgres connection string |
-| `OPENAI_API_KEY` | — | ❌ | Enables AI-enriched planner descriptions |
+| `GITHUB_MODELS_TOKEN` | — | ❌ | GitHub PAT with `models:read` scope — enables AI-enriched submission feedback |
+| `GITHUB_MODELS_ENDPOINT` | `https://models.inference.ai.azure.com` | ❌ | Override the GitHub Models inference endpoint |
+| `GITHUB_MODELS_MODEL` | `gpt-4o-mini` | ❌ | Model name to use (e.g. `gpt-4o`, `meta-llama-3-8b-instruct`) |
 | `NEXT_PUBLIC_APP_URL` | `http://localhost:3000` | ❌ | Used for absolute URLs in emails/links |
 
 Copy `.env.local.example` to `.env.local` and fill in your values.
@@ -173,7 +175,48 @@ const rubric = await prisma.rubric.create({
 
 ---
 
-## Planner Logic
+## AI Integration (GitHub Models)
+
+PrepBook uses [GitHub Models](https://github.com/marketplace/models) as its AI backend — no OpenAI account needed, just a GitHub token.
+
+### Enabling AI
+
+1. Go to **GitHub → Settings → Personal access tokens → Fine-grained tokens**.
+2. Create a token with the **`models:read`** scope.
+3. Add it to your `.env.local`:
+   ```
+   GITHUB_MODELS_TOKEN="github_pat_..."
+   ```
+4. Restart the dev server.
+
+### AI features
+
+| Feature | Route | Behavior without token |
+|---------|-------|------------------------|
+| DBQ/LEQ submission feedback | `POST /api/submissions/[id]/submit` | Falls back to word-count heuristics |
+
+### Disable AI / fallback mode
+
+Simply omit or leave `GITHUB_MODELS_TOKEN` empty. Every feature continues to work using deterministic rule-based logic.
+
+### Troubleshooting
+
+- **`401 Unauthorized` from GitHub Models** — Token is expired or lacks `models:read` scope.
+- **`429 Rate limit`** — You've hit the free-tier quota; wait or switch to a different model via `GITHUB_MODELS_MODEL`.
+- **No AI feedback after submitting** — Check server logs for `GitHub Models API error` entries.
+
+---
+
+## Planner Dates & Timezones
+
+Tasks are stored with **UTC noon** timestamps (`12:00:00 UTC`). This ensures the calendar date is identical in every timezone from UTC−12 to UTC+12 with no day-boundary shift.
+
+The planner UI reads dates using UTC components (`getUTCDate()` etc.) so "Today" is always the correct local calendar day regardless of where the server or browser runs.
+
+**If tasks appear a day early/late after upgrading:**
+Regenerate your study plan (click **Regenerate Plan**) to replace old midnight-UTC tasks with the noon-UTC format.
+
+---
 
 **Location:** `src/lib/planner.ts`
 
@@ -183,7 +226,7 @@ The planner uses a **hybrid deterministic + AI approach**:
    - Prioritizes weak units (low mastery score).
    - Balances mode mix: ~30% MCQ, ~25% SAQ, ~25% DBQ, ~20% LEQ.
    - Activates **pre-exam intensity mode** in the final 3 weeks (more timed MCQ/mixed sets).
-   - If `OPENAI_API_KEY` is set, enriches task titles/descriptions via OpenAI; otherwise uses deterministic templates.
+   - All task dates are stored at **UTC noon** to avoid timezone day-boundary issues.
 
 2. **`rescheduleMissedTasks(tasks)`** — Takes the task list, finds incomplete past-due tasks, and reassigns them to the earliest available future slot.
 
@@ -221,6 +264,7 @@ prepbook/
 │   └── lib/
 │       ├── prisma.ts        # Prisma client singleton
 │       ├── planner.ts       # Planner generation logic
+│       ├── ai.ts            # GitHub Models AI service
 │       └── hooks.ts         # React hooks (useUserId, etc.)
 ├── .devcontainer/
 │   └── devcontainer.json    # Codespaces config
@@ -230,9 +274,25 @@ prepbook/
 
 ---
 
+## Feature Ideas (Backlog)
+
+The following are prioritized next features, roughly highest-to-lowest impact:
+
+| Priority | Feature | Notes |
+|----------|---------|-------|
+| 🔴 High | **AI-adaptive planner** — Re-rank units each week based on recent attempt accuracy | Extend `calculateMastery` + weekly re-gen |
+| 🔴 High | **Timed MCQ mini-tests** — 10-question timed sets per unit with instant scoring | New `/practice/timed` route |
+| 🟡 Medium | **Flashcard mode** — Spaced-repetition review of key terms by unit | Deck data from `Question.explanation` |
+| 🟡 Medium | **Streak & habit tracking** — Daily completion streaks on the dashboard | `completedAt` already stored |
+| 🟡 Medium | **AI essay outline assistant** — Generate a structured outline before writing | Pre-fill workspace via GitHub Models |
+| 🟢 Low | **Teacher/parent view** — Read-only dashboard sharing via a link token | New `shareToken` on User |
+| 🟢 Low | **PWA / offline mode** — Cache practice sets for offline use | `next-pwa` plugin |
+| 🟢 Low | **Additional AP subjects** — AP US History, AP European History | `subject` field on Unit + Question |
+
+---
+
 ## Future Expansion
 
 - **Additional AP subjects:** Add a `subject` field to `Unit` and `Question`; filter everywhere by subject.
 - **External database:** Update `DATABASE_URL` + Prisma provider; run `prisma migrate deploy`.
-- **AI scoring:** Implement `POST /api/submissions/[id]/score` calling an LLM with rubric criteria as a structured prompt.
 - **Auth:** Add Clerk or NextAuth; replace `x-user-id` header with session tokens.
