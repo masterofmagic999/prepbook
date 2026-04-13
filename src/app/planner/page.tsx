@@ -40,12 +40,22 @@ const TYPE_COLORS: Record<string, string> = {
   MIXED: 'bg-indigo-100 text-indigo-700',
 }
 
+// Return a YYYY-MM-DD key derived from the UTC calendar date.
+// Planner stores dates as UTC noon; reading getUTC* avoids local-timezone
+// midnight boundaries that would render tasks as "yesterday".
+function utcDateKey(date: Date): string {
+  const y = date.getUTCFullYear()
+  const m = String(date.getUTCMonth() + 1).padStart(2, '0')
+  const d = String(date.getUTCDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
 function groupByDate(tasks: StudyTask[]): Record<string, StudyTask[]> {
   const grouped: Record<string, StudyTask[]> = {}
   for (const task of tasks) {
-    const dateStr = new Date(task.date).toDateString()
-    if (!grouped[dateStr]) grouped[dateStr] = []
-    grouped[dateStr].push(task)
+    const key = utcDateKey(new Date(task.date))
+    if (!grouped[key]) grouped[key] = []
+    grouped[key].push(task)
   }
   return grouped
 }
@@ -120,19 +130,20 @@ export default function PlannerPage() {
     </div>
   }
 
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
+  const todayKey = utcDateKey(new Date())
 
-  // Show next 14 days of tasks
+  // Show tasks from yesterday (-1) through next 14 days
   const upcoming = plan?.tasks?.filter(t => {
     const d = new Date(t.date)
-    d.setHours(0, 0, 0, 0)
-    const diff = (d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+    const taskMs = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
+    const now = new Date()
+    const todayMs = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+    const diff = (taskMs - todayMs) / (1000 * 60 * 60 * 24)
     return diff >= -1 && diff <= 14
   }) ?? []
 
   const grouped = groupByDate(upcoming)
-  const sortedDates = Object.keys(grouped).sort((a, b) => new Date(a).getTime() - new Date(b).getTime())
+  const sortedDates = Object.keys(grouped).sort()
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -199,8 +210,10 @@ export default function PlannerPage() {
         <div className="space-y-6">
           {sortedDates.map((dateStr) => {
             const tasks = grouped[dateStr]
-            const date = new Date(dateStr)
-            const isToday = date.toDateString() === today.toDateString()
+            // Parse as UTC noon so toLocaleDateString shows the correct calendar day
+            const [y, mo, d] = dateStr.split('-').map(Number)
+            const date = new Date(Date.UTC(y, mo - 1, d, 12, 0, 0, 0))
+            const isToday = dateStr === todayKey
 
             return (
               <div key={dateStr}>
