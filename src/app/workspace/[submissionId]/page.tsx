@@ -64,13 +64,10 @@ export default function WorkspacePage() {
         setContent(data.content ?? '')
         setSubmitted(data.status === 'FINAL')
 
-        // Load rubric
+        // Load rubric criteria from DB via rubric endpoint
         const qType = data.question.type
-        const rubricRes = await fetch(`/api/questions?type=${qType}&limit=1`)
-        // We'll use a simple inline rubric
         setDataLoading(false)
 
-        // Load rubric criteria from DB via questions endpoint
         const rRes = await fetch(`/api/rubric?type=${qType}`)
         if (rRes.ok) {
           const r = await rRes.json()
