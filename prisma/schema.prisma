@@ -1,0 +1,185 @@
+// This is your Prisma schema file
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  profile     Profile?
+  attempts    Attempt[]
+  submissions WritingSubmission[]
+  studyPlans  StudyPlan[]
+  mastery     MasterySnapshot[]
+}
+
+model Profile {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  examDate     DateTime
+  targetScore  Int
+  hoursPerWeek Float
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Unit {
+  id          String  @id @default(cuid())
+  number      Int     @unique
+  name        String
+  description String
+  timePeriod  String
+
+  questions StudyTask[]     @relation("UnitTasks")
+  mastery   MasterySnapshot[]
+  Question  Question[]
+}
+
+model Question {
+  id                    String   @id @default(cuid())
+  unitId                String
+  type                  String
+  prompt                String
+  stimulus              String?
+  choices               String?
+  correctAnswer         String?
+  explanation           String?
+  historicalThinkingSkill String
+  difficulty            Int
+  timePeriod            String
+  createdAt             DateTime @default(now())
+
+  unit        Unit                @relation(fields: [unitId], references: [id])
+  attempts    Attempt[]
+  submissions WritingSubmission[]
+}
+
+model Attempt {
+  id               String   @id @default(cuid())
+  userId           String
+  questionId       String
+  response         String
+  isCorrect        Boolean?
+  score            Float?
+  feedback         String?
+  timeSpentSeconds Int?
+  createdAt        DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id])
+  question Question @relation(fields: [questionId], references: [id])
+}
+
+model WritingSubmission {
+  id           String   @id @default(cuid())
+  userId       String
+  questionId   String
+  title        String
+  content      String
+  wordCount    Int
+  status       String   @default("DRAFT")
+  timerSeconds Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id])
+  question Question @relation(fields: [questionId], references: [id])
+  scores   SubmissionScore[]
+}
+
+model Rubric {
+  id           String   @id @default(cuid())
+  questionType String
+  version      Int
+  name         String
+  description  String
+  createdAt    DateTime @default(now())
+
+  criteria RubricCriterion[]
+}
+
+model RubricCriterion {
+  id          String @id @default(cuid())
+  rubricId    String
+  name        String
+  description String
+  maxPoints   Int
+  orderIndex  Int
+
+  rubric  Rubric            @relation(fields: [rubricId], references: [id])
+  scores  SubmissionScore[]
+}
+
+model SubmissionScore {
+  id                String   @id @default(cuid())
+  submissionId      String
+  rubricCriterionId String?
+  criterionName     String
+  score             Float
+  maxScore          Float
+  feedback          String
+  createdAt         DateTime @default(now())
+
+  submission       WritingSubmission @relation(fields: [submissionId], references: [id])
+  rubricCriterion  RubricCriterion?  @relation(fields: [rubricCriterionId], references: [id])
+}
+
+model StudyPlan {
+  id           String   @id @default(cuid())
+  userId       String
+  generatedAt  DateTime @default(now())
+  examDate     DateTime
+  targetScore  Int
+  hoursPerWeek Float
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user  User        @relation(fields: [userId], references: [id])
+  tasks StudyTask[]
+}
+
+model StudyTask {
+  id              String    @id @default(cuid())
+  planId          String
+  date            DateTime
+  title           String
+  description     String
+  type            String
+  unitId          String?
+  durationMinutes Int
+  isCompleted     Boolean   @default(false)
+  completedAt     DateTime?
+  isRescheduled   Boolean   @default(false)
+  rescheduledFrom DateTime?
+  createdAt       DateTime  @default(now())
+
+  plan StudyPlan @relation(fields: [planId], references: [id])
+  unit Unit?     @relation("UnitTasks", fields: [unitId], references: [id])
+}
+
+model MasterySnapshot {
+  id              String   @id @default(cuid())
+  userId          String
+  unitId          String
+  masteryScore    Float    @default(0)
+  totalAttempts   Int      @default(0)
+  correctAttempts Int      @default(0)
+  lastUpdated     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+  unit Unit @relation(fields: [unitId], references: [id])
+
+  @@unique([userId, unitId])
+}
