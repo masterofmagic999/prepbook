@@ -12,7 +12,7 @@ A full-stack MVP for AP World History exam preparation featuring unit-based MCQ/
 | Styling | Tailwind CSS | Utility-first, fast iteration |
 | Icons | lucide-react | Lightweight icon set |
 
-> **Swapping the DB later:** Change `DATABASE_URL` in `.env` and update `datasource db { provider = "postgresql" }` in `prisma/schema.prisma`. Run `npx prisma migrate deploy`. No application logic changes needed.
+> **Swapping the DB later:** Change `DATABASE_URL` in `.env.local` and update `datasource db { provider = "postgresql" }` in `prisma/schema.prisma`. Run `npx prisma migrate deploy`. No application logic changes needed.
 
 ---
 
@@ -23,7 +23,7 @@ A full-stack MVP for AP World History exam preparation featuring unit-based MCQ/
 - 📅 **Personalized Study Planner** — Auto-generated daily tasks based on exam date, hours/week, and unit mastery; auto-reschedules missed tasks; pre-exam intensity mode in final 3 weeks
 - 📊 **Review Center** — Per-unit mastery bars and incorrect-answer log with retry links
 - 🎯 **Mastery Tracking** — Per-unit scores updated automatically from attempt history
-- 🤖 **AI Hook** — Set `OPENAI_API_KEY` to enrich planner task descriptions; falls back gracefully to deterministic output
+- 🤖 **AI Providers** — Supports Cerebras Cloud, OpenRouter (free-tier models), and GitHub Models; falls back gracefully to deterministic output when no key is configured
 
 ---
 
@@ -90,6 +90,8 @@ npm run dev
 | `CEREBRAS_BASE_URL` | `https://api.cerebras.ai/v1` | ❌ | Override Cerebras base URL |
 
 Copy `.env.local.example` to `.env.local` and fill in your values.
+
+> **⚠️ Note on `enviorment.env`:** An older file named `enviorment.env` (misspelled) exists in the repo root. It is now gitignored and should not be used. Copy `.env.local.example` to `.env.local` instead — this is the file Next.js loads automatically.
 
 ---
 
