@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useUserId } from '@/lib/hooks'
-import { BookOpen, LayoutDashboard, Calendar, BarChart2, PenTool, Menu, X } from 'lucide-react'
+import { BookOpen, LayoutDashboard, Calendar, BarChart2, PenTool, Menu, X, Settings } from 'lucide-react'
 import { useState } from 'react'
 
 const navItems = [
@@ -11,6 +11,7 @@ const navItems = [
   { href: '/practice', label: 'Practice', icon: PenTool },
   { href: '/planner', label: 'Planner', icon: Calendar },
   { href: '/review', label: 'Review', icon: BarChart2 },
+  { href: '/settings', label: 'Settings', icon: Settings },
 ]
 
 export default function NavWrapper({ children }: { children: React.ReactNode }) {

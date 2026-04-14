@@ -132,14 +132,14 @@ export default function PlannerPage() {
 
   const todayKey = utcDateKey(new Date())
 
-  // Show tasks from yesterday (-1) through next 14 days
+  // Show tasks from today through next 14 days
   const upcoming = plan?.tasks?.filter(t => {
     const d = new Date(t.date)
     const taskMs = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
     const now = new Date()
     const todayMs = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
     const diff = (taskMs - todayMs) / (1000 * 60 * 60 * 24)
-    return diff >= -1 && diff <= 14
+    return diff >= 0 && diff <= 14
   }) ?? []
 
   const grouped = groupByDate(upcoming)

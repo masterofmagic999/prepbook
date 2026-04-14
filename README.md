@@ -42,6 +42,8 @@ A full-stack MVP for AP World History exam preparation featuring unit-based MCQ/
    ```
 4. Open the forwarded port `3000` in your browser.
 
+> **502 Bad Gateway in Codespaces?** This means Next.js is not running yet. Make sure the terminal shows `✓ Ready` before opening the port preview. Run `npm run dev` (not `npm start`). See [Troubleshooting](#troubleshooting) below.
+
 ---
 
 ## Local Development
@@ -63,9 +65,13 @@ npx prisma db push
 # 5. Seed AP World History units + sample questions
 npx prisma db seed
 
-# 6. Start the dev server
+# 6. Start the dev server (development)
 npm run dev
 # → http://localhost:3000
+
+# For production build + start:
+npm run build
+npm start
 ```
 
 ---
@@ -237,6 +243,25 @@ Cerebras offers fast inference with generous free credits.
 |---------|-------|---------------------|
 | DBQ/LEQ submission feedback | `POST /api/submissions/[id]/submit` | Falls back to word-count heuristics |
 
+### AI connectivity check
+
+Once the app is running, navigate to **Settings** (sidebar) to verify your AI configuration without restarting the server.
+
+The diagnostics card shows:
+- Which provider is active and which model is selected
+- Whether an API key is present (key value is never shown)
+- Last time the status was checked
+- A **Run Live AI Connectivity Test** button that sends a lightweight test prompt to the provider and reports pass/fail with latency
+
+You can also call the endpoint directly:
+```bash
+# Status only (no API call)
+curl http://localhost:3000/api/ai/health
+
+# Live connectivity test
+curl "http://localhost:3000/api/ai/health?ping=1"
+```
+
 ### Disable AI / fallback mode
 
 Leave all AI keys blank. Every feature continues to work using deterministic rule-based logic.
@@ -247,6 +272,98 @@ Leave all AI keys blank. Every feature continues to work using deterministic rul
 - **`429 Rate limit`** — Free-tier quota hit; wait or switch providers/models.
 - **No AI feedback after submitting** — Check server logs for `API error` entries.
 - **Wrong provider being used** — Set `AI_PROVIDER` explicitly to override auto-detection.
+- **Settings page shows "Disabled"** — No matching key for the configured provider. Check `.env.local` and restart `npm run dev`.
+
+---
+
+## Materials Ingestion Pipeline
+
+You can upload a folder of AP World History study materials and have PrepBook generate tagged MCQ + SAQ question drafts from them.
+
+### Setup
+
+1. Place `.txt` or `.md` files in the `materials/` folder at the repo root.
+   - Any format works (notes, summaries, textbook excerpts, etc.)
+   - File names can be anything: `unit1-notes.txt`, `ch5-silk-road.md`, etc.
+
+2. Run the ingestion script:
+   ```bash
+   npm run ingest
+   ```
+
+3. Output is saved to `data/questions.json` — a JSON array of validated question objects.
+
+### AI-enhanced vs deterministic mode
+
+| Condition | Behavior |
+|-----------|----------|
+| `AI_PROVIDER` + key configured | AI generates contextually accurate MCQ + SAQ drafts |
+| No key / `AI_PROVIDER=fallback` | Deterministic rule-based extraction (always available) |
+
+### Output format
+
+Each item in `data/questions.json` contains:
+
+```json
+{
+  "type": "MCQ",
+  "prompt": "...",
+  "choices": ["A) ...", "B) ...", "C) ...", "D) ..."],
+  "correctAnswer": "A) ...",
+  "explanation": "...",
+  "unit": 2,
+  "skill": "causation",
+  "difficulty": 2,
+  "timePeriod": "1200-1450",
+  "sourceFile": "unit2-notes.txt",
+  "sourceChunk": "..."
+}
+```
+
+SAQ items have `choices: null` and `correctAnswer: null`.
+
+### Validation
+
+Malformed items (missing required fields, wrong types) are rejected with an error message and skipped. Valid items are always included in the output.
+
+---
+
+## Troubleshooting
+
+### 502 Bad Gateway in Codespaces
+
+This is the most common issue. Causes and fixes:
+
+| Cause | Fix |
+|-------|-----|
+| Running `npm start` without a build | Run `npm run dev` instead, or run `npm run build` first |
+| Dev server not started yet | Open a terminal and run `npm run dev`; wait for `✓ Ready` |
+| Dev server crashed on startup | Check the terminal for error messages |
+| DB not initialized | Run `npx prisma db push && npx prisma db seed` |
+| Wrong port forwarded | Forward port `3000` in the Ports tab |
+
+**Quick fix:**
+```bash
+# Kill any stuck node processes
+pkill -f node || true
+
+# Re-init database if needed
+npx prisma db push
+npx prisma db seed
+
+# Start dev server
+npm run dev
+```
+
+### App starts but AI features don't work
+
+1. Check **Settings → AI Provider Status** in the app.
+2. Click **Run Live AI Connectivity Test**.
+3. Common errors:
+   - **Unauthorized** — API key is wrong or expired
+   - **Model not found** — wrong model name in `.env.local`
+   - **Network error** — provider endpoint unreachable (Codespaces outbound firewall)
+   - **Timed out** — provider took too long; retry or switch models
 
 ---
 
@@ -254,7 +371,7 @@ Leave all AI keys blank. Every feature continues to work using deterministic rul
 
 Tasks are stored with **UTC noon** timestamps (`12:00:00 UTC`). This ensures the calendar date is identical in every timezone from UTC−12 to UTC+12 with no day-boundary shift.
 
-The planner UI reads dates using UTC components (`getUTCDate()` etc.) so "Today" is always the correct local calendar day regardless of where the server or browser runs.
+The planner UI reads dates using UTC components (`getUTCDate()` etc.) so "Today" is always the correct local calendar day regardless of where the server or browser runs. The schedule view always starts from **today** (not yesterday).
 
 **If tasks appear a day early/late after upgrading:**
 Regenerate your study plan (click **Regenerate Plan**) to replace old midnight-UTC tasks with the noon-UTC format.
