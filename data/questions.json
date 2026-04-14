@@ -9,11 +9,11 @@
       "D) It shows the impact of technological innovation on society."
     ],
     "correctAnswer": "A) It illustrates the spread of trade networks across regions.",
-    "explanation": "This passage relates to Land-Based Empires and demonstrates key themes of comparison. Review the passage for specific evidence.",
-    "unit": 3,
+    "explanation": "This passage relates to Networks of Exchange and demonstrates key themes of comparison. Review the passage for specific evidence.",
+    "unit": 2,
     "skill": "comparison",
     "difficulty": 2,
-    "timePeriod": "1450-1750",
+    "timePeriod": "1200-1450",
     "sourceFile": "sample-unit2.txt",
     "sourceChunk": "The Silk Road was a network of trade routes that connected China, Central Asia, and the Mediterranean world from around 200 BCE to 1450 CE.\n\nMerchants traveled these routes exchanging goods like silk, spices, glassware, and precious metals. Beyond material goods, the Silk Road facilitated the spread"
   },
@@ -22,11 +22,11 @@
     "prompt": "Using specific evidence from your knowledge of AP World History, answer the following:\n\na) Identify ONE historical development described in the following excerpt.\nb) Explain ONE cause of this development.\nc) Explain ONE effect of this development.\n\nExcerpt: \"The Silk Road was a network of trade routes that connected China, Central Asia, and the Mediterranean world from around 200 BCE to 1450 CE.\n\nMerchants traveled these routes exchanging goods like silk, spices, glassware, and precious metals. Beyond material goods, the Silk Road facilitated the spread\"",
     "choices": null,
     "correctAnswer": null,
-    "explanation": "Strong responses will identify a specific development in Land-Based Empires, provide a historically grounded cause, and connect the development to broader effects. Use precise terminology.",
-    "unit": 3,
+    "explanation": "Strong responses will identify a specific development in Networks of Exchange, provide a historically grounded cause, and connect the development to broader effects. Use precise terminology.",
+    "unit": 2,
     "skill": "comparison",
     "difficulty": 3,
-    "timePeriod": "1450-1750",
+    "timePeriod": "1200-1450",
     "sourceFile": "sample-unit2.txt",
     "sourceChunk": "The Silk Road was a network of trade routes that connected China, Central Asia, and the Mediterranean world from around 200 BCE to 1450 CE.\n\nMerchants traveled these routes exchanging goods like silk, spices, glassware, and precious metals. Beyond material goods, the Silk Road facilitated the spread"
   }

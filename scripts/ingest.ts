@@ -108,17 +108,18 @@ function detectUnit(text: string): number | null {
   const unitMatch = text.match(/unit\s+([1-9])/i)
   if (unitMatch) return parseInt(unitMatch[1])
 
-  // Heuristic: look for year ranges
+  // Heuristic: look for year ranges matching 1200–2029
   const years = text.match(/\b(1[2-9]\d{2}|20[0-2]\d)\b/g)?.map(Number) ?? []
   if (years.length === 0) return null
 
   const avg = years.reduce((a, b) => a + b, 0) / years.length
-  if (avg < 1450) return 1
-  if (avg < 1750) return 3
-  if (avg < 1900) return 5
-  if (avg < 1945) return 7
-  if (avg < 1980) return 8
-  return 9
+  // Use <= 1450 so that years right at the 1200-1450 boundary map to Unit 2
+  if (avg <= 1450) return 2   // Networks of Exchange (1200-1450)
+  if (avg <= 1750) return 4   // Transoceanic Interconnections (1450-1750)
+  if (avg <= 1900) return 6   // Consequences of Industrialization (1750-1900)
+  if (avg <= 1945) return 7   // Global Conflict (1900-1945)
+  if (avg <= 1980) return 8   // Cold War and Decolonization (1945-1980)
+  return 9                    // Globalization (1980-present)
 }
 
 function detectSkill(text: string): string {
